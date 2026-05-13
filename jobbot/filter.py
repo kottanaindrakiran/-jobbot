@@ -35,7 +35,7 @@ log = logging.getLogger("filter")
 #  CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────
 PROFILE_PATH   = Path(__file__).parent / "profile.json"
-MIN_SCORE      = 30       # minimum match_score to keep a job
+MIN_SCORE      = 15       # minimum match_score to keep a job
 TOP_N          = 100      # max jobs to return
 FRESHNESS_HRS  = 48       # hours — jobs older than this are dropped
 ROLE_BOOST     = 20       # bonus points when job title matches a target role
