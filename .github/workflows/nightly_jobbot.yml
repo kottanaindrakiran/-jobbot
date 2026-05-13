@@ -1,5 +1,5 @@
 # NOTE: IDE "unable to resolve action" warnings below are FALSE POSITIVES.
-# These actions (checkout@v3, setup-python@v4, upload-artifact@v3) are
+# These actions (checkout@v4, setup-python@v5, upload-artifact@v4) are
 # official GitHub-published actions and work correctly on GitHub Actions runners.
 # The local VS Code GitHub Actions extension cannot validate them without
 # GitHub API authentication. Push to GitHub and the workflow runs fine.
@@ -19,11 +19,11 @@ jobs:
     steps:
       # ── Checkout code ────────────────────────────────────────────────────────
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # ── Python setup ─────────────────────────────────────────────────────────
       - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -69,7 +69,7 @@ jobs:
       # ── Upload logs as artifact ──────────────────────────────────────────────
       - name: Upload run logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jobbot-logs-${{ github.run_number }}
           path: jobbot/logs/
@@ -78,7 +78,7 @@ jobs:
       # ── Upload generated resumes ─────────────────────────────────────────────
       - name: Upload generated resumes
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jobbot-resumes-${{ github.run_number }}
           path: jobbot/resumes/
