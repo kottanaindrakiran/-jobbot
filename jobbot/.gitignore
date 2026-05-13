@@ -1,0 +1,28 @@
+# Secrets — NEVER commit these
+.env
+token_gmail.json
+token_sheets.json
+credentials_gmail.json
+credentials_google.json
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Generated output
+resumes/*.pdf
+resumes/*.docx
+resumes/*.md
+logs/*.log
+output/
+
+# OS
+.DS_Store
+Thumbs.db

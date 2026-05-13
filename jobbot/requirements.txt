@@ -1,0 +1,28 @@
+# ─────────────────────────────────────────────
+#  JobBot — Python Dependencies
+# ─────────────────────────────────────────────
+
+# Browser automation
+playwright
+
+# HTTP & scraping
+requests
+beautifulsoup4
+lxml
+fake-useragent
+
+# AI / Claude
+anthropic
+
+# Document generation
+python-docx
+reportlab
+
+# Google APIs
+google-auth
+google-auth-oauthlib
+google-api-python-client
+gspread
+
+# Environment
+python-dotenv

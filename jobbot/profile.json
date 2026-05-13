@@ -1,0 +1,87 @@
+{
+  "name": "Kottana Indra Kiran",
+  "email": "kottanaindrakiran@gmail.com",
+  "phone": "7382538122",
+  "location": "Visakhapatnam, India",
+  "location_preference": "Any location in India, Remote preferred",
+  "linkedin": "https://www.linkedin.com/in/indra-kiran-kottana/",
+  "github": "https://github.com/kottanaindrakiran",
+  "leetcode": "https://leetcode.com/u/kottanaindrakiran/",
+  "hackerrank": "https://www.hackerrank.com/profile/ik9846",
+
+  "education": {
+    "degree": "B.Tech Computer Science",
+    "institute": "SRM Institute of Science and Technology, Chennai",
+    "cgpa": "7.7",
+    "graduation": "May 2026"
+  },
+
+  "experience_years": 0,
+  "experience_label": "Fresher with strong project portfolio",
+
+  "internship": {
+    "role": "Java Full Stack Developer Intern",
+    "company": "Eduskills Foundation",
+    "duration": "Jan 2025 - Mar 2025",
+    "stack": ["Spring Boot", "MySQL", "HTML", "CSS", "JavaScript"]
+  },
+
+  "target_roles": [
+    "Full Stack Developer",
+    "Software Development Engineer",
+    "Java Developer",
+    "Frontend Developer",
+    "React Developer",
+    "AI Engineer",
+    "Backend Developer"
+  ],
+
+  "target_locations": [
+    "Remote",
+    "Bangalore",
+    "Hyderabad",
+    "Chennai",
+    "Mumbai",
+    "Pune",
+    "Visakhapatnam"
+  ],
+
+  "skills": {
+    "languages": ["Java", "Python", "JavaScript", "TypeScript", "HTML", "CSS"],
+    "frameworks": ["ReactJS", "React Native", "FastAPI", "Spring Boot", "Spring Security", "REST APIs"],
+    "ai_ml": ["LLMs", "LLM APIs", "RAG", "Prompt Engineering", "NLP", "Multimodal AI", "Computer Vision", "OCR", "OpenCV"],
+    "databases": ["PostgreSQL", "MySQL", "MongoDB", "Supabase", "Redis", "pgvector", "PostGIS"],
+    "tools": ["Git", "GitHub", "Docker", "Docker Compose", "WebSockets", "WebRTC", "Twilio", "Vercel", "Railway", "VS Code", "JWT Auth", "Microservices"]
+  },
+
+  "projects": [
+    {
+      "name": "AcadNet",
+      "description": "Intelligent academic social networking platform with multi-stage identity verification, relevance-driven content ranking, and real-time collaboration",
+      "stack": ["Java", "Spring Boot", "Spring Security", "React.js", "PostgreSQL", "Redis", "Supabase", "Docker", "WebSockets", "FastAPI", "OpenCV", "Tesseract OCR"]
+    },
+    {
+      "name": "HealthBridge AI",
+      "description": "Real-time healthcare triage platform with RAG-based medical reasoning, voice/image/text symptom analysis, and emergency routing",
+      "stack": ["Python", "FastAPI", "Next.js", "Tailwind CSS", "RAG", "Supabase", "pgvector", "PostGIS", "Redis", "Twilio", "WebSockets"]
+    },
+    {
+      "name": "SkillSwap",
+      "description": "Real-time skill-sharing platform with NLP recommendation system, video-based skills showcase, and real-time chat",
+      "stack": ["React.js", "JavaScript", "Tailwind CSS", "Supabase", "PostgreSQL", "NLP", "Real-time Chat"]
+    }
+  ],
+
+  "certifications": [
+    "AWS Academy Machine Learning Foundations",
+    "Java Programming Beginners to Master - Udemy",
+    "Alteryx Designer Core Certificate",
+    "Salesforce AI Associate",
+    "Oracle Cloud Infrastructure Foundations Associate"
+  ],
+
+  "salary_expectation_lpa": "4-8",
+  "notice_period": "Immediate joiner",
+  "willing_to_relocate": true,
+  "job_types": ["Full-time", "Internship"]
+}

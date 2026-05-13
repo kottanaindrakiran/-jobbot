@@ -1,0 +1,51 @@
+# Environments
+.env
+.env.*
+!.env.example
+
+# Credentials
+*credentials*.json
+*service_account*.json
+*token*.json
+
+# Logs and outputs
+jobbot/logs/
+jobbot/resumes/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.venv
+venv/
+ENV/
+
+# Playwright
+test-results/
+
+# OS Files
+.DS_Store
+Thumbs.db

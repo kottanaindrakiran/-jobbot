@@ -1,0 +1,78 @@
+# NOTE: IDE "unable to resolve action" warnings below are FALSE POSITIVES.
+# These actions (checkout@v3, setup-python@v4, upload-artifact@v3) are
+# official GitHub-published actions and work correctly on GitHub Actions runners.
+# The local VS Code GitHub Actions extension cannot validate them without
+# GitHub API authentication. Push to GitHub and the workflow runs fine.
+
+name: JobBot Nightly Run
+
+on:
+  schedule:
+    - cron: '0 18 * * *'   # 11:30 PM IST (UTC+5:30) every day
+  workflow_dispatch:         # manual trigger from GitHub Actions UI
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90      # kill if stuck (Playwright can hang)
+
+    steps:
+      # ── Checkout code ────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # ── Python setup ─────────────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # ── Install dependencies ─────────────────────────────────────────────────
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r jobbot/requirements.txt
+
+      # ── Playwright browser ───────────────────────────────────────────────────
+      - name: Install Playwright Chromium
+        run: playwright install chromium --with-deps
+
+      # ── Create output directories ────────────────────────────────────────────
+      - name: Create resumes and logs directories
+        run: |
+          mkdir -p jobbot/resumes
+          mkdir -p jobbot/logs
+
+      # ── Run JobBot ───────────────────────────────────────────────────────────
+      - name: Run JobBot pipeline
+        working-directory: jobbot
+        run: python main.py
+        env:
+          ANTHROPIC_API_KEY:         ${{ secrets.ANTHROPIC_API_KEY }}
+          LINKEDIN_EMAIL:            ${{ secrets.LINKEDIN_EMAIL }}
+          LINKEDIN_PASSWORD:         ${{ secrets.LINKEDIN_PASSWORD }}
+          NAUKRI_EMAIL:              ${{ secrets.NAUKRI_EMAIL }}
+          NAUKRI_PASSWORD:           ${{ secrets.NAUKRI_PASSWORD }}
+          GMAIL_CREDENTIALS_JSON:    ${{ secrets.GMAIL_CREDENTIALS_JSON }}
+          GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
+          GOOGLE_SHEET_ID:           ${{ secrets.GOOGLE_SHEET_ID }}
+          MY_EMAIL:                  ${{ secrets.MY_EMAIL }}
+
+      # ── Upload logs as artifact ──────────────────────────────────────────────
+      - name: Upload run logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: jobbot-logs-${{ github.run_number }}
+          path: jobbot/logs/
+          retention-days: 30
+
+      # ── Upload generated resumes ─────────────────────────────────────────────
+      - name: Upload generated resumes
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: jobbot-resumes-${{ github.run_number }}
+          path: jobbot/resumes/
+          retention-days: 7
