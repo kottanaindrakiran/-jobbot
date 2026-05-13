@@ -94,7 +94,7 @@ CONFIG = {
     "max_emails":        20,      # stop cold-emailing after this many
     "sleep_between":     (5, 10), # seconds between jobs (randomised)
     "sources":           ["linkedin", "naukri", "wellfound", "internshala"],
-    "min_score":         30,
+    "min_score":         15,
     "top_n":             100,
 }
 
@@ -348,8 +348,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--min-score",
         type=float,
-        default=30.0,
-        help="Minimum match score to process a job (default: 30)",
+        default=15.0,
+        help="Minimum match score to process a job (default: 15)",
     )
 
     args = parser.parse_args()
