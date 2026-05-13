@@ -44,6 +44,13 @@ jobs:
           mkdir -p jobbot/resumes
           mkdir -p jobbot/logs
 
+      # ── Inject Gmail Token ───────────────────────────────────────────────────
+      - name: Inject Gmail Token
+        run: |
+          if [ -n "${{ secrets.GMAIL_TOKEN_JSON }}" ]; then
+            echo '${{ secrets.GMAIL_TOKEN_JSON }}' > jobbot/logs/token_gmail.json
+          fi
+
       # ── Run JobBot ───────────────────────────────────────────────────────────
       - name: Run JobBot pipeline
         working-directory: jobbot
