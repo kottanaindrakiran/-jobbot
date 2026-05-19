@@ -288,10 +288,19 @@ def get_applied_urls() -> list[str]:
     """
     try:
         ws   = _get_worksheet()
-        # Get entire column I (COL_URL = 9), skip header row
-        col  = ws.col_values(COL_URL)
-        urls = [v.strip() for v in col[1:] if v.strip()]  # skip header
-        log.info(f"[Sheets] Loaded {len(urls)} applied URLs from Sheets")
+        rows = ws.get_all_values()
+        if len(rows) < 2:
+            return []
+            
+        urls = []
+        for row in rows[1:]:
+            if len(row) >= max(COL_URL, COL_METHOD):
+                url = row[COL_URL - 1].strip()
+                method = row[COL_METHOD - 1].strip()
+                if url and method != "DryRun":
+                    urls.append(url)
+                    
+        log.info(f"[Sheets] Loaded {len(urls)} applied URLs from Sheets (ignoring DryRuns)")
         return urls
     except Exception as e:
         log.warning(f"[Sheets] Could not load applied URLs: {e}")
