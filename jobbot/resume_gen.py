@@ -109,7 +109,7 @@ def _call_gemini(prompt: str, system: str) -> str:
     api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     body = {
         "contents": [{"parts": [{"text": f"{system}\n\n{prompt}"}]}],
         "generationConfig": {"maxOutputTokens": MAX_TOKENS, "temperature": 0.7},
@@ -128,7 +128,7 @@ def _call_groq(prompt: str, system: str) -> str:
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     body = {
-        "model": "llama3-70b-8192",
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {"role": "system", "content": system},
             {"role": "user",   "content": prompt},
@@ -149,7 +149,7 @@ def _call_openrouter(prompt: str, system: str) -> str:
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     body = {
-        "model": "meta-llama/llama-3-8b-instruct:free",
+        "model": "meta-llama/llama-3.3-70b-instruct:free",
         "messages": [
             {"role": "system", "content": system},
             {"role": "user",   "content": prompt},
@@ -212,17 +212,19 @@ def _make_styles() -> dict:
             "name",
             fontName="Helvetica-Bold",
             fontSize=20,
+            leading=24,
             textColor=ACCENT,
             alignment=TA_CENTER,
-            spaceAfter=2,
+            spaceAfter=8,
         ),
         "contact": ParagraphStyle(
             "contact",
             fontName="Helvetica",
             fontSize=8.5,
+            leading=12,
             textColor=BODY_GREY,
             alignment=TA_CENTER,
-            spaceAfter=6,
+            spaceAfter=10,
         ),
         "section_heading": ParagraphStyle(
             "section_heading",
