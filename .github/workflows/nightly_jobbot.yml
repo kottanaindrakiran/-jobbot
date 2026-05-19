@@ -73,7 +73,10 @@ jobs:
       # ── Run JobBot ───────────────────────────────────────────────────────────
       - name: Run JobBot pipeline
         working-directory: jobbot
-        run: python main.py
+        run: |
+          python main.py
+          echo "=== PIPELINE LOGS ==="
+          cat logs/jobbot_*.log
         env:
           ANTHROPIC_API_KEY:         ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY:            ${{ secrets.GEMINI_API_KEY }}

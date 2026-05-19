@@ -107,6 +107,9 @@ def _save_cookies(context, name: str):
 
 def _load_cookies(context, name: str) -> bool:
     path = COOKIES_DIR / f"cookies_{name}.json"
+    alt_path = COOKIES_DIR / f"{name}_cookies.json"
+    if not path.exists() and alt_path.exists():
+        path = alt_path
     if not path.exists():
         log.info(f"[{name}] Cookie file not found at {path}")
         return False
