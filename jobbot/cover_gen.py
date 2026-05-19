@@ -1,8 +1,13 @@
 """
 cover_gen.py
 ------------
-Generates a personalised, human-sounding cover letter for each job
-using Claude AI (claude-sonnet-4-20250514).
+Generates a personalised cover letter using a cascade of AI providers.
+
+AI Cascade (auto-fallback when credits run out):
+  1. Google Gemini (free 1500 req/day)
+  2. Groq / LLaMA-3 (free 14400 req/day)
+  3. OpenRouter (free models)
+  4. Hand-crafted fallback template
 
 Public API:
     generate_cover_letter(job)          → cover letter text (str)
@@ -15,7 +20,7 @@ import re
 import time
 from pathlib import Path
 
-import anthropic
+import requests
 from dotenv import load_dotenv
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -30,8 +35,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("cover_gen")
 
-CLAUDE_MODEL = "claude-sonnet-4-20250514"
-MAX_TOKENS   = 500
+MAX_TOKENS = 500
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  PROMPTS
@@ -148,51 +152,96 @@ def _word_count(text: str) -> int:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  AI CASCADE  (Gemini → Groq → OpenRouter → fallback)
+# ─────────────────────────────────────────────────────────────────────────────
+def _ai_gemini(prompt: str) -> str:
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY not set")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    body = {
+        "contents": [{"parts": [{"text": f"{SYSTEM_PROMPT}\n\n{prompt}"}]}],
+        "generationConfig": {"maxOutputTokens": MAX_TOKENS, "temperature": 0.8},
+    }
+    r = requests.post(url, json=body, timeout=30)
+    r.raise_for_status()
+    return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+
+def _ai_groq(prompt: str) -> str:
+    api_key = os.getenv("GROQ_API_KEY", "")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY not set")
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    body = {
+        "model": "llama3-70b-8192",
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": prompt},
+        ],
+        "max_tokens": MAX_TOKENS,
+        "temperature": 0.8,
+    }
+    r = requests.post(url, headers=headers, json=body, timeout=30)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].strip()
+
+
+def _ai_openrouter(prompt: str) -> str:
+    api_key = os.getenv("OPENROUTER_API_KEY", "")
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY not set")
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    body = {
+        "model": "meta-llama/llama-3-8b-instruct:free",
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": prompt},
+        ],
+        "max_tokens": MAX_TOKENS,
+    }
+    r = requests.post(url, headers=headers, json=body, timeout=30)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].strip()
+
+
+def _call_ai_cascade(prompt: str, label: str) -> str | None:
+    """Try each AI provider in order. Returns text or None."""
+    for name, fn in [("Gemini", _ai_gemini), ("Groq", _ai_groq), ("OpenRouter", _ai_openrouter)]:
+        try:
+            log.info(f"[CoverGen] Trying {name} for: {label}")
+            text = fn(prompt)
+            log.info(f"[CoverGen] ✅ {name} returned {_word_count(text)} words")
+            return text
+        except Exception as e:
+            log.warning(f"[CoverGen] {name} failed: {e} — trying next")
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  CORE FUNCTION
 # ─────────────────────────────────────────────────────────────────────────────
 def generate_cover_letter(job: dict) -> str:
     """
-    Generate a tailored cover letter for the given job.
-
-    Args:
-        job: A job dict with at least 'title', 'company', 'jd_text'
-
-    Returns:
-        Cover letter as a plain-text string (≤150 words).
-        Falls back to a hand-crafted template if Claude is unavailable.
+    Generate a tailored cover letter using AI cascade:
+    Gemini → Groq → OpenRouter → fallback template.
     """
     title   = job.get("title",   "N/A")
     company = job.get("company", "N/A")
-    log.info(f"[CoverGen] Generating cover letter: {title} @ {company}")
+    label   = f"{title} @ {company}"
+    log.info(f"[CoverGen] Generating cover letter: {label}")
 
-    # ── Try Claude ─────────────────────────────────────────────────────────────
-    try:
-        client  = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        message = client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=MAX_TOKENS,
-            system=SYSTEM_PROMPT,
-            messages=[
-                {"role": "user", "content": _build_user_prompt(job)}
-            ],
-        )
-        raw  = message.content[0].text
+    raw = _call_ai_cascade(_build_user_prompt(job), label)
+    if raw:
         text = _clean_cover_letter(raw)
-
-        words = _word_count(text)
-        log.info(f"[CoverGen] ✅ Claude returned {words} words for '{title} @ {company}'")
+        log.info(f"[CoverGen] Cover letter generated ({_word_count(text)} words)")
         return text
 
-    except anthropic.APIConnectionError as e:
-        log.warning(f"[CoverGen] Connection error: {e} — using fallback template")
-    except anthropic.RateLimitError:
-        log.warning("[CoverGen] Rate limit hit — using fallback template")
-    except anthropic.APIStatusError as e:
-        log.warning(f"[CoverGen] API error {e.status_code}: {e.message} — using fallback")
-    except Exception as e:
-        log.warning(f"[CoverGen] Unexpected error: {e} — using fallback template")
-
+    log.warning("[CoverGen] All AI providers failed — using fallback template")
     return _fallback_cover_letter(job)
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

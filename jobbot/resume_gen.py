@@ -1,14 +1,20 @@
 """
 resume_gen.py
 -------------
-Generates an ATS-optimised PDF resume for each job using Claude AI.
+Generates an ATS-optimised PDF resume for each job using a cascade of AI providers.
+
+AI Cascade (auto-fallback when credits run out):
+  1. Google Gemini (free 1500 req/day)
+  2. Groq / LLaMA-3 (free 14400 req/day)
+  3. OpenRouter (free models)
+  4. Base template (no AI)
 
 Pipeline:
   1. Build a job-tailored prompt from profile.json
-  2. Call Claude API (claude-sonnet-4-20250514) → resume text
+  2. Call AI cascade → resume text
   3. Render resume text → professional PDF via ReportLab
   4. Save to /resumes/{company}_{role}_{timestamp}.pdf
-  5. Return filepath (falls back to base-template PDF on API failure)
+  5. Return filepath
 """
 
 import json
@@ -19,7 +25,7 @@ import textwrap
 from datetime import datetime
 from pathlib import Path
 
-import anthropic
+import requests
 from dotenv import load_dotenv
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -51,8 +57,7 @@ PROFILE_PATH  = Path(__file__).parent / "profile.json"
 RESUMES_DIR   = Path(__file__).parent / "resumes"
 RESUMES_DIR.mkdir(exist_ok=True)
 
-CLAUDE_MODEL  = "claude-sonnet-4-20250514"
-MAX_TOKENS    = 2000
+MAX_TOKENS = 2000
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  PROFILE
@@ -97,29 +102,95 @@ Rules:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  STEP 2 — CLAUDE API CALL
+#  STEP 2 — AI CASCADE  (Gemini → Groq → OpenRouter → base template)
 # ─────────────────────────────────────────────────────────────────────────────
-def _call_claude(profile: dict, job: dict) -> str:
-    """
-    Call Claude API and return the raw resume text.
-    Raises on failure so the caller can fall back to base template.
-    """
-    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+def _call_gemini(prompt: str, system: str) -> str:
+    """Call Google Gemini API (free 1500 req/day)."""
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY not set")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    body = {
+        "contents": [{"parts": [{"text": f"{system}\n\n{prompt}"}]}],
+        "generationConfig": {"maxOutputTokens": MAX_TOKENS, "temperature": 0.7},
+    }
+    r = requests.post(url, json=body, timeout=30)
+    r.raise_for_status()
+    data = r.json()
+    return data["candidates"][0]["content"]["parts"][0]["text"].strip()
 
-    log.info(f"[ResumeGen] Calling Claude for: {job.get('title')} @ {job.get('company')}")
 
-    message = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=MAX_TOKENS,
-        system=SYSTEM_PROMPT,
-        messages=[
-            {"role": "user", "content": _build_user_prompt(profile, job)}
+def _call_groq(prompt: str, system: str) -> str:
+    """Call Groq LLaMA-3 API (free 14400 req/day)."""
+    api_key = os.getenv("GROQ_API_KEY", "")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY not set")
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    body = {
+        "model": "llama3-70b-8192",
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user",   "content": prompt},
         ],
-    )
+        "max_tokens": MAX_TOKENS,
+        "temperature": 0.7,
+    }
+    r = requests.post(url, headers=headers, json=body, timeout=30)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].strip()
 
-    resume_text = message.content[0].text.strip()
-    log.info(f"[ResumeGen] Claude returned {len(resume_text)} chars")
-    return resume_text
+
+def _call_openrouter(prompt: str, system: str) -> str:
+    """Call OpenRouter free models (Llama / Mistral)."""
+    api_key = os.getenv("OPENROUTER_API_KEY", "")
+    if not api_key:
+        raise ValueError("OPENROUTER_API_KEY not set")
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    body = {
+        "model": "meta-llama/llama-3-8b-instruct:free",
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user",   "content": prompt},
+        ],
+        "max_tokens": MAX_TOKENS,
+    }
+    r = requests.post(url, headers=headers, json=body, timeout=30)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"].strip()
+
+
+def _call_ai(prompt: str, system: str, label: str) -> str | None:
+    """
+    Try each AI provider in order. Return text on first success.
+    Returns None if ALL providers fail (caller uses base template).
+    """
+    providers = [
+        ("Gemini",      _call_gemini),
+        ("Groq",        _call_groq),
+        ("OpenRouter",  _call_openrouter),
+    ]
+    for name, fn in providers:
+        try:
+            log.info(f"[ResumeGen] Trying {name} for: {label}")
+            text = fn(prompt, system)
+            log.info(f"[ResumeGen] ✅ {name} returned {len(text)} chars")
+            return text
+        except Exception as e:
+            log.warning(f"[ResumeGen] {name} failed: {e} — trying next provider")
+    log.warning("[ResumeGen] All AI providers failed — using base template")
+    return None
+
+
+def _call_claude(profile: dict, job: dict) -> str:
+    """Legacy wrapper kept for compatibility — now routes to AI cascade."""
+    prompt = _build_user_prompt(profile, job)
+    label  = f"{job.get('title')} @ {job.get('company')}"
+    result = _call_ai(prompt, SYSTEM_PROMPT, label)
+    if result is None:
+        raise RuntimeError("All providers failed")
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────────────
