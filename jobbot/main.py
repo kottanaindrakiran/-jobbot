@@ -284,6 +284,7 @@ def main():
             else:
                 # DRY RUN — just log
                 log.info(f"  [DRY RUN] Would apply to: {title} @ {company}")
+                job["dry_run"] = True
                 try:
                     sheets_logger.log_application(job, "DryRun", score)
                 except Exception:

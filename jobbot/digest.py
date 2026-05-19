@@ -93,6 +93,7 @@ def _build_body(stats: dict, top_jobs: list) -> str:
         for i, job in enumerate(top_jobs[:10], 1):
             score  = job.get("match_score", 0)
             method = (
+                "🧪 DryRun"   if job.get("dry_run")    else
                 "✅ Applied"  if job.get("applied")    else
                 "📧 Emailed"  if job.get("email_sent") else
                 "⏭  Skipped"

@@ -219,6 +219,13 @@ def log_application(
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     cover_sent = "Yes" if job.get("cover_letter") or job.get("email_sent") else "No"
 
+    # Status reflects actual application success
+    status = "Applied"
+    if method == "DryRun":
+        status = "DryRun"
+    elif method == "Manual":
+        status = "Manual"
+
     row = [
         now,
         job.get("company",   ""),
@@ -227,7 +234,7 @@ def log_application(
         job.get("source",    ""),
         method,
         round(match_score, 1),
-        "Applied",
+        status,
         job.get("apply_url", ""),
         cover_sent,
         "",  # Notes — filled manually later
