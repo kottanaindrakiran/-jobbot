@@ -43,6 +43,11 @@ LOG_FILE    = LOGS_DIR / f"jobbot_{TODAY}.log"
 #  LOGGING — both console and file
 # ─────────────────────────────────────────────────────────────────────────────
 def _setup_logging():
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass  # sys.stdout might not support reconfigure in some exotic environments
     fmt = "%(asctime)s  [%(levelname)-8s]  %(name)s — %(message)s"
     logging.basicConfig(
         level=logging.INFO,
