@@ -164,21 +164,21 @@ def scrape_linkedin(roles: list[str] = TARGET_ROLES) -> list[dict]:
             # ── Login ──────────────────────────────────────────────────────
             logged_in = False
             if _load_cookies(context, "linkedin"):
-                page.goto("https://www.linkedin.com/feed/", timeout=NAV_TIMEOUT)
-                page.wait_for_load_state("networkidle")
+                page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+                page.wait_for_load_state("domcontentloaded")
                 if "feed" in page.url:
                     log.info("[LinkedIn] Session restored via cookies ✓")
                     logged_in = True
 
             if not logged_in:
                 log.info("[LinkedIn] Logging in …")
-                page.goto("https://www.linkedin.com/login", timeout=NAV_TIMEOUT)
+                page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
                 try:
                     page.wait_for_selector("#username", timeout=NAV_TIMEOUT)
                     page.fill("#username", LI_EMAIL)
                     page.fill("#password", LI_PASS)
                     page.click("button[type=submit]")
-                    page.wait_for_load_state("networkidle")
+                    page.wait_for_load_state("domcontentloaded")
                     time.sleep(2)
                     if "feed" in page.url or "mynetwork" in page.url:
                         log.info("[LinkedIn] Login successful ✓")
@@ -203,8 +203,8 @@ def scrape_linkedin(roles: list[str] = TARGET_ROLES) -> list[dict]:
                     "&f_TPR=r86400"
                 )
                 try:
-                    page.goto(url, timeout=NAV_TIMEOUT)
-                    page.wait_for_load_state("networkidle")
+                    page.goto(url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+                    page.wait_for_load_state("domcontentloaded")
                     time.sleep(random.uniform(2, 3))
 
                     # Scroll to trigger lazy-load
@@ -287,22 +287,22 @@ def scrape_naukri(roles: list[str] = TARGET_ROLES) -> list[dict]:
             # ── Login ──────────────────────────────────────────────────────
             logged_in = False
             if _load_cookies(context, "naukri"):
-                page.goto("https://www.naukri.com/", timeout=NAV_TIMEOUT)
-                page.wait_for_load_state("networkidle")
-                if page.query_selector("div.nI-gNb-drawer__icon, a[href*='nlogin/logout']"):
+                page.goto("https://www.naukri.com/mnjuser/homepage", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+                page.wait_for_load_state("domcontentloaded")
+                if "nlogin" not in page.url and "login" not in page.url:
                     log.info("[Naukri] Session restored via cookies ✓")
                     logged_in = True
 
             if not logged_in:
                 log.info("[Naukri] Logging in …")
-                page.goto("https://www.naukri.com/nlogin/login", timeout=NAV_TIMEOUT)
+                page.goto("https://www.naukri.com/nlogin/login", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
                 try:
                     page.wait_for_selector("input[placeholder*='Email']", timeout=NAV_TIMEOUT)
                     time.sleep(1)
                     page.fill("input[placeholder*='Email']", NK_EMAIL)
                     page.fill("input[placeholder*='Password']", NK_PASS)
                     page.click("button[type=submit]")
-                    page.wait_for_load_state("networkidle")
+                    page.wait_for_load_state("domcontentloaded")
                     time.sleep(2)
                     _save_cookies(context, "naukri")
                     log.info("[Naukri] Login successful ✓")
@@ -323,8 +323,8 @@ def scrape_naukri(roles: list[str] = TARGET_ROLES) -> list[dict]:
                 url  = f"https://www.naukri.com/{slug}-jobs-in-india"
 
                 try:
-                    page.goto(url, timeout=NAV_TIMEOUT)
-                    page.wait_for_load_state("networkidle")
+                    page.goto(url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+                    page.wait_for_load_state("domcontentloaded")
                     time.sleep(random.uniform(2, 3))
 
                     soup  = BeautifulSoup(page.content(), "lxml")
@@ -403,22 +403,22 @@ def scrape_wellfound(roles: list[str] = TARGET_ROLES) -> list[dict]:
             # ── Login ──────────────────────────────────────────────────────
             logged_in = False
             if _load_cookies(context, "wellfound"):
-                page.goto("https://wellfound.com/jobs", timeout=NAV_TIMEOUT)
-                page.wait_for_load_state("networkidle")
+                page.goto("https://wellfound.com/jobs", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+                page.wait_for_load_state("domcontentloaded")
                 if "login" not in page.url:
                     log.info("[Wellfound] Session restored via cookies ✓")
                     logged_in = True
 
             if not logged_in:
                 log.info("[Wellfound] Logging in …")
-                page.goto("https://wellfound.com/login", timeout=NAV_TIMEOUT)
+                page.goto("https://wellfound.com/login", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
                 try:
                     page.wait_for_selector("input[type='email']", timeout=NAV_TIMEOUT)
                     time.sleep(1)
                     page.fill("input[type='email']", WF_EMAIL)
                     page.fill("input[type='password']", WF_PASS)
                     page.click("button[type='submit']")
-                    page.wait_for_load_state("networkidle")
+                    page.wait_for_load_state("domcontentloaded")
                     time.sleep(2)
                     if "login" not in page.url:
                         log.info("[Wellfound] Login successful ✓")
@@ -444,8 +444,8 @@ def scrape_wellfound(roles: list[str] = TARGET_ROLES) -> list[dict]:
                 url = f"https://wellfound.com/role/l/{role_slug}/india"
 
                 try:
-                    page.goto(url, timeout=NAV_TIMEOUT)
-                    page.wait_for_load_state("networkidle")
+                    page.goto(url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+                    page.wait_for_load_state("domcontentloaded")
                     time.sleep(random.uniform(2, 3))
 
                     soup  = BeautifulSoup(page.content(), "lxml")
@@ -643,9 +643,9 @@ if __name__ == "__main__":
     test_roles = ["Full Stack Developer", "Backend Developer"]
     jobs = scrape_all(roles=test_roles)
 
-    print(f"\n{'─'*60}")
+    print(f"\n{'-'*60}")
     print(f"  Found {len(jobs)} jobs total")
-    print(f"{'─'*60}")
+    print(f"{'-'*60}")
     for i, job in enumerate(jobs[:5], 1):
         print(f"\n[{i}] {job['title']} @ {job['company']}")
         print(f"    Source  : {job['source']}")
@@ -656,4 +656,4 @@ if __name__ == "__main__":
     import json as _json
     with open(out, "w", encoding="utf-8") as f:
         _json.dump(jobs, f, indent=2, default=str)
-    print(f"\n💾 Saved to {out}")
+    print(f"\nSaved to {out}")

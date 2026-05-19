@@ -98,17 +98,17 @@ async def _li_login(page: Page, context) -> bool:
     """Login to LinkedIn. Returns True on success."""
     # Try saved cookies first
     if await _load_cookies(context, "linkedin"):
-        await page.goto("https://www.linkedin.com/feed/", timeout=NAV_TIMEOUT)
+        await page.goto("https://www.linkedin.com/feed/", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
         if "feed" in page.url:
             log.info("[LinkedIn] Session restored via cookies ✓")
             return True
 
     log.info("[LinkedIn] Logging in …")
-    await page.goto("https://www.linkedin.com/login", timeout=NAV_TIMEOUT)
+    await page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
     await page.fill("#username", LI_EMAIL, timeout=ACT_TIMEOUT)
     await page.fill("#password", LI_PASS,  timeout=ACT_TIMEOUT)
     await page.click("button[type=submit]",  timeout=ACT_TIMEOUT)
-    await page.wait_for_load_state("networkidle")
+    await page.wait_for_load_state("domcontentloaded")
 
     if "checkpoint" in page.url or "captcha" in page.url:
         log.warning("[LinkedIn] CAPTCHA / checkpoint detected — manual intervention needed")
@@ -215,8 +215,8 @@ async def _apply_linkedin_async(job: dict, resume_pdf_path: str, profile: dict |
                 return False
 
             # ── Navigate to job ────────────────────────────────────────────────
-            await page.goto(url, timeout=NAV_TIMEOUT)
-            await page.wait_for_load_state("networkidle")
+            await page.goto(url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+            await page.wait_for_load_state("domcontentloaded")
             await asyncio.sleep(2)
 
             # ── Check Easy Apply button ────────────────────────────────────────
@@ -322,9 +322,8 @@ async def _apply_linkedin_async(job: dict, resume_pdf_path: str, profile: dict |
 async def _naukri_login(page: Page, context) -> bool:
     """Login to Naukri. Returns True on success."""
     if await _load_cookies(context, "naukri"):
-        await page.goto("https://www.naukri.com/", timeout=NAV_TIMEOUT)
-        logged_in = await page.query_selector("div.nI-gNb-drawer__icon")
-        if logged_in:
+        await page.goto("https://www.naukri.com/mnjuser/homepage", timeout=NAV_TIMEOUT)
+        if "nlogin" not in page.url and "login" not in page.url:
             log.info("[Naukri] Session restored via cookies ✓")
             return True
 
@@ -384,8 +383,8 @@ async def _apply_naukri_async(job: dict, resume_pdf_path: str, profile: dict | N
                 await browser.close()
                 return False
 
-            await page.goto(url, timeout=NAV_TIMEOUT)
-            await page.wait_for_load_state("networkidle")
+            await page.goto(url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+            await page.wait_for_load_state("domcontentloaded")
             await asyncio.sleep(2)
 
             # ── Already applied? ───────────────────────────────────────────────
@@ -498,7 +497,7 @@ async def _internshala_login(page: Page, context) -> bool:
     """Login to Internshala. Returns True on success."""
     if await _load_cookies(context, "internshala"):
         await page.goto("https://internshala.com/student/dashboard", timeout=NAV_TIMEOUT)
-        if "dashboard" in page.url:
+        if "login" not in page.url.lower() and "internshala.com" in page.url:
             log.info("[Internshala] Session restored via cookies ✓")
             return True
 
@@ -558,8 +557,8 @@ async def _apply_internshala_async(job: dict, resume_pdf_path: str, profile: dic
                 await browser.close()
                 return False
 
-            await page.goto(url, timeout=NAV_TIMEOUT)
-            await page.wait_for_load_state("networkidle")
+            await page.goto(url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+            await page.wait_for_load_state("domcontentloaded")
             await asyncio.sleep(2)
 
             # Already applied?
@@ -641,20 +640,20 @@ async def _apply_internshala_async(job: dict, resume_pdf_path: str, profile: dic
 async def _wellfound_login(page: Page, context) -> bool:
     """Login to Wellfound. Returns True on success."""
     if await _load_cookies(context, "wellfound"):
-        await page.goto("https://wellfound.com/jobs", timeout=NAV_TIMEOUT)
+        await page.goto("https://wellfound.com/jobs", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
         if "jobs" in page.url and "login" not in page.url:
             log.info("[Wellfound] Session restored via cookies ✓")
             return True
 
     log.info("[Wellfound] Logging in …")
-    await page.goto("https://wellfound.com/login", timeout=NAV_TIMEOUT)
+    await page.goto("https://wellfound.com/login", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
     await asyncio.sleep(2)
 
     try:
         await page.fill("input[name='user[email]'], input[type='email']", WF_EMAIL, timeout=ACT_TIMEOUT)
         await page.fill("input[name='user[password]'], input[type='password']", WF_PASS, timeout=ACT_TIMEOUT)
         await page.click("input[type='submit'], button[type='submit']", timeout=ACT_TIMEOUT)
-        await page.wait_for_load_state("networkidle")
+        await page.wait_for_load_state("domcontentloaded")
         await asyncio.sleep(2)
     except Exception as e:
         log.warning(f"[Wellfound] Login form error: {e}")
@@ -702,8 +701,8 @@ async def _apply_wellfound_async(job: dict, resume_pdf_path: str, profile: dict 
                 await browser.close()
                 return False
 
-            await page.goto(url, timeout=NAV_TIMEOUT)
-            await page.wait_for_load_state("networkidle")
+            await page.goto(url, wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+            await page.wait_for_load_state("domcontentloaded")
             await asyncio.sleep(2)
 
             # Click Apply button
