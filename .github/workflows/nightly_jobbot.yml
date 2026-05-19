@@ -61,6 +61,10 @@ jobs:
           LINKEDIN_PASSWORD:         ${{ secrets.LINKEDIN_PASSWORD }}
           NAUKRI_EMAIL:              ${{ secrets.NAUKRI_EMAIL }}
           NAUKRI_PASSWORD:           ${{ secrets.NAUKRI_PASSWORD }}
+          INTERNSHALA_EMAIL:         ${{ secrets.INTERNSHALA_EMAIL }}
+          INTERNSHALA_PASSWORD:      ${{ secrets.INTERNSHALA_PASSWORD }}
+          WELLFOUND_EMAIL:           ${{ secrets.WELLFOUND_EMAIL }}
+          WELLFOUND_PASSWORD:        ${{ secrets.WELLFOUND_PASSWORD }}
           GMAIL_CREDENTIALS_JSON:    ${{ secrets.GMAIL_CREDENTIALS_JSON }}
           GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
           GOOGLE_SHEET_ID:           ${{ secrets.GOOGLE_SHEET_ID }}

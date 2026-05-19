@@ -1,12 +1,14 @@
 """
 apply_bot.py
 ------------
-Auto-applies to jobs on LinkedIn (Easy Apply) and Naukri using Playwright async.
+Auto-applies to jobs on LinkedIn, Naukri, Internshala, and Wellfound using Playwright.
 
 Public API:
-    apply_linkedin(job, resume_pdf_path)  -> bool
-    apply_naukri(job, resume_pdf_path)    -> bool
-    run_apply_bot(jobs, profile)          -> jobs (with 'applied' key)
+    apply_linkedin(job, resume_pdf_path, profile)    -> bool
+    apply_naukri(job, resume_pdf_path, profile)      -> bool
+    apply_internshala(job, resume_pdf_path, profile) -> bool
+    apply_wellfound(job, resume_pdf_path, profile)   -> bool
+    run_apply_bot(jobs, profile)                     -> jobs (with 'applied' key)
 """
 
 import asyncio
@@ -35,6 +37,10 @@ LI_EMAIL   = os.getenv("LINKEDIN_EMAIL")
 LI_PASS    = os.getenv("LINKEDIN_PASSWORD")
 NK_EMAIL   = os.getenv("NAUKRI_EMAIL")
 NK_PASS    = os.getenv("NAUKRI_PASSWORD")
+IS_EMAIL   = os.getenv("INTERNSHALA_EMAIL")
+IS_PASS    = os.getenv("INTERNSHALA_PASSWORD")
+WF_EMAIL   = os.getenv("WELLFOUND_EMAIL")
+WF_PASS    = os.getenv("WELLFOUND_PASSWORD")
 
 HEADLESS   = True
 NAV_TIMEOUT = 30_000   # ms
@@ -465,6 +471,268 @@ async def apply_naukri(job: dict, resume_pdf_path: str, profile: dict | None = N
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  INTERNSHALA
+# ─────────────────────────────────────────────────────────────────────────────
+async def _internshala_login(page: Page, context) -> bool:
+    """Login to Internshala. Returns True on success."""
+    if await _load_cookies(context, "internshala"):
+        await page.goto("https://internshala.com/student/dashboard", timeout=NAV_TIMEOUT)
+        if "dashboard" in page.url:
+            log.info("[Internshala] Session restored via cookies ✓")
+            return True
+
+    log.info("[Internshala] Logging in …")
+    await page.goto("https://internshala.com/login/student", timeout=NAV_TIMEOUT)
+    await asyncio.sleep(1.5)
+
+    try:
+        await page.fill("input#email", IS_EMAIL, timeout=ACT_TIMEOUT)
+        await page.fill("input#password", IS_PASS, timeout=ACT_TIMEOUT)
+        await page.click("button#login_submit", timeout=ACT_TIMEOUT)
+        await page.wait_for_load_state("networkidle")
+        await asyncio.sleep(2)
+    except Exception as e:
+        log.warning(f"[Internshala] Login form error: {e}")
+        return False
+
+    if "dashboard" in page.url or "internshala.com/student" in page.url:
+        log.info("[Internshala] Login successful ✓")
+        await _save_cookies(context, "internshala")
+        return True
+
+    log.error(f"[Internshala] Login failed — URL: {page.url}")
+    return False
+
+
+async def apply_internshala(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
+    """
+    Apply to an Internshala job listing via Playwright.
+    Returns True if application submitted successfully.
+    """
+    if not IS_EMAIL or not IS_PASS:
+        log.warning("[Internshala] Credentials not set — skipping")
+        return False
+    if profile is None:
+        profile = _load_profile()
+
+    url = job.get("apply_url", "")
+    log.info(f"[Internshala] Applying → {job.get('title')} @ {job.get('company')}")
+
+    try:
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(headless=HEADLESS)
+            context = await browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/124.0.0.0 Safari/537.36"
+                )
+            )
+            page = await context.new_page()
+
+            if not await _internshala_login(page, context):
+                await browser.close()
+                return False
+
+            await page.goto(url, timeout=NAV_TIMEOUT)
+            await page.wait_for_load_state("networkidle")
+            await asyncio.sleep(2)
+
+            # Already applied?
+            already = await page.query_selector(".already_applied, .already-applied")
+            if already:
+                log.info("[Internshala] Already applied to this job")
+                await browser.close()
+                return False
+
+            # Click Apply Now button
+            apply_btn = await page.query_selector(
+                "#apply_now_btn, "
+                "button.apply_now, "
+                "a.apply_now_btn, "
+                ".apply-button"
+            )
+            if not apply_btn:
+                log.info("[Internshala] No Apply button found — skipping")
+                await browser.close()
+                return False
+
+            await apply_btn.click()
+            await asyncio.sleep(2)
+
+            # Fill cover letter if textarea appears
+            cover_ta = await page.query_selector("textarea#cover_letter, textarea[name='cover_letter']")
+            if cover_ta:
+                cover_text = job.get("cover_letter", 
+                    f"I am a passionate Full Stack Developer (Java, React, Spring Boot) "
+                    f"graduating from SRM IST in 2026. I am excited to apply for "
+                    f"{job.get('title')} at {job.get('company')} and believe I can "
+                    f"contribute meaningfully to your team from day one."
+                )
+                await cover_ta.fill(cover_text[:500])  # Internshala caps at 500 chars
+                await asyncio.sleep(0.5)
+
+            # Click the final submit / apply button inside modal
+            submit_btn = await page.query_selector(
+                "button#submit, "
+                "button[type=submit], "
+                "#apply_popup button.btn-primary, "
+                ".modal button.apply_now"
+            )
+            if submit_btn:
+                await submit_btn.click()
+                await asyncio.sleep(2)
+
+            # Confirm success
+            page_text = await page.evaluate("document.body.innerText")
+            submitted = any(kw in page_text.lower() for kw in [
+                "successfully applied", "application sent", "applied successfully",
+                "thank you for applying", "you have applied"
+            ])
+
+            # Also check if we're now showing "Applied" badge
+            applied_badge = await page.query_selector(".already_applied, .applied-label")
+            if applied_badge:
+                submitted = True
+
+            if submitted:
+                log.info(f"[Internshala] ✅ Applied: {job['title']} @ {job['company']}")
+            else:
+                log.warning(f"[Internshala] ⚠️  Could not confirm submission for {job['title']}")
+
+            await browser.close()
+            return submitted
+
+    except PWTimeout as e:
+        log.warning(f"[Internshala] Timeout: {e}")
+        return False
+    except Exception as e:
+        log.error(f"[Internshala] Error: {e}")
+        return False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  WELLFOUND  (AngelList Talent)
+# ─────────────────────────────────────────────────────────────────────────────
+async def _wellfound_login(page: Page, context) -> bool:
+    """Login to Wellfound. Returns True on success."""
+    if await _load_cookies(context, "wellfound"):
+        await page.goto("https://wellfound.com/jobs", timeout=NAV_TIMEOUT)
+        if "jobs" in page.url and "login" not in page.url:
+            log.info("[Wellfound] Session restored via cookies ✓")
+            return True
+
+    log.info("[Wellfound] Logging in …")
+    await page.goto("https://wellfound.com/login", timeout=NAV_TIMEOUT)
+    await asyncio.sleep(2)
+
+    try:
+        await page.fill("input[name='user[email]'], input[type='email']", WF_EMAIL, timeout=ACT_TIMEOUT)
+        await page.fill("input[name='user[password]'], input[type='password']", WF_PASS, timeout=ACT_TIMEOUT)
+        await page.click("input[type='submit'], button[type='submit']", timeout=ACT_TIMEOUT)
+        await page.wait_for_load_state("networkidle")
+        await asyncio.sleep(2)
+    except Exception as e:
+        log.warning(f"[Wellfound] Login form error: {e}")
+        return False
+
+    if "login" not in page.url:
+        log.info("[Wellfound] Login successful ✓")
+        await _save_cookies(context, "wellfound")
+        return True
+
+    log.error(f"[Wellfound] Login failed — URL: {page.url}")
+    return False
+
+
+async def apply_wellfound(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
+    """
+    Apply to a Wellfound job listing.
+    Returns True if application submitted successfully.
+    """
+    if not WF_EMAIL or not WF_PASS:
+        log.warning("[Wellfound] Credentials not set — skipping")
+        return False
+    if profile is None:
+        profile = _load_profile()
+
+    url = job.get("apply_url", "")
+    log.info(f"[Wellfound] Applying → {job.get('title')} @ {job.get('company')}")
+
+    try:
+        async with async_playwright() as pw:
+            browser = await pw.chromium.launch(headless=HEADLESS)
+            context = await browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/124.0.0.0 Safari/537.36"
+                )
+            )
+            page = await context.new_page()
+
+            if not await _wellfound_login(page, context):
+                await browser.close()
+                return False
+
+            await page.goto(url, timeout=NAV_TIMEOUT)
+            await page.wait_for_load_state("networkidle")
+            await asyncio.sleep(2)
+
+            # Click Apply button
+            apply_btn = await page.query_selector(
+                "button[data-test='apply-btn'], "
+                "a[data-test='apply-btn'], "
+                "button.styles_applyButton__"
+            )
+            if not apply_btn:
+                log.info("[Wellfound] No Apply button found — skipping")
+                await browser.close()
+                return False
+
+            await apply_btn.click()
+            await asyncio.sleep(2)
+
+            # Fill introduction/cover letter
+            intro_ta = await page.query_selector("textarea[placeholder*='introduction'], textarea[name*='note']")
+            if intro_ta:
+                intro = (
+                    f"Hi, I'm Indra Kiran, a Full Stack Developer (Java, React, Spring Boot, AI) "
+                    f"graduating from SRM IST in 2026. I'm very excited about the "
+                    f"{job.get('title')} role at {job.get('company')}. "
+                    f"I've built production-grade apps and would love to contribute to your team."
+                )
+                await intro_ta.fill(intro)
+                await asyncio.sleep(0.5)
+
+            # Submit
+            submit = await page.query_selector("button[type='submit'], button.apply-submit")
+            if submit:
+                await submit.click()
+                await asyncio.sleep(2)
+
+            page_text = await page.evaluate("document.body.innerText")
+            submitted = any(kw in page_text.lower() for kw in [
+                "application sent", "applied", "thank you", "successfully"
+            ])
+
+            if submitted:
+                log.info(f"[Wellfound] ✅ Applied: {job['title']} @ {job['company']}")
+            else:
+                log.warning(f"[Wellfound] ⚠️  Could not confirm: {job['title']}")
+
+            await browser.close()
+            return submitted
+
+    except PWTimeout as e:
+        log.warning(f"[Wellfound] Timeout: {e}")
+        return False
+    except Exception as e:
+        log.error(f"[Wellfound] Error: {e}")
+        return False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  ORCHESTRATOR
 # ─────────────────────────────────────────────────────────────────────────────
 async def _run_apply_bot_async(jobs: list[dict], profile: dict) -> list[dict]:
@@ -479,8 +747,12 @@ async def _run_apply_bot_async(jobs: list[dict], profile: dict) -> list[dict]:
             job["applied"] = await apply_linkedin(job, resume, profile)
         elif source == "naukri":
             job["applied"] = await apply_naukri(job, resume, profile)
+        elif source == "internshala":
+            job["applied"] = await apply_internshala(job, resume, profile)
+        elif source == "wellfound":
+            job["applied"] = await apply_wellfound(job, resume, profile)
         else:
-            log.info(f"[ApplyBot] Source '{source}' not auto-applicable — skipping")
+            log.info(f"[ApplyBot] Source '{source}' not supported — skipping")
             job["applied"] = False
 
         # Polite random delay between applications
