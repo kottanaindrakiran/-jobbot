@@ -52,16 +52,16 @@ jobs:
             echo '${{ secrets.GMAIL_TOKEN_JSON }}' > jobbot/logs/token_gmail.json
           fi
           if [ -n "${{ secrets.LINKEDIN_COOKIES }}" ]; then
-            echo '${{ secrets.LINKEDIN_COOKIES }}' > jobbot/logs/linkedin_cookies.json
+            echo '${{ secrets.LINKEDIN_COOKIES }}' > jobbot/logs/cookies_linkedin.json
           fi
           if [ -n "${{ secrets.NAUKRI_COOKIES }}" ]; then
-            echo '${{ secrets.NAUKRI_COOKIES }}' > jobbot/logs/naukri_cookies.json
+            echo '${{ secrets.NAUKRI_COOKIES }}' > jobbot/logs/cookies_naukri.json
           fi
           if [ -n "${{ secrets.WELLFOUND_COOKIES }}" ]; then
-            echo '${{ secrets.WELLFOUND_COOKIES }}' > jobbot/logs/wellfound_cookies.json
+            echo '${{ secrets.WELLFOUND_COOKIES }}' > jobbot/logs/cookies_wellfound.json
           fi
           if [ -n "${{ secrets.INTERNSHALA_COOKIES }}" ]; then
-            echo '${{ secrets.INTERNSHALA_COOKIES }}' > jobbot/logs/internshala_cookies.json
+            echo '${{ secrets.INTERNSHALA_COOKIES }}' > jobbot/logs/cookies_internshala.json
           fi
 
       # ── Run JobBot ───────────────────────────────────────────────────────────

@@ -16,17 +16,24 @@ async def run():
     print("be saved, and you can copy them to GitHub Secrets.")
     
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=False)
+        browser = await pw.chromium.launch(
+            headless=False,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--start-maximized"
+            ]
+        )
         context = await browser.new_context(
+            no_viewport=True,
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         )
         page = await context.new_page()
 
         platforms = [
-            ("Internshala", "https://internshala.com/login/student", "internshala_cookies.json", "https://internshala.com/student/dashboard"),
-            ("LinkedIn", "https://www.linkedin.com/login", "linkedin_cookies.json", "https://www.linkedin.com/feed/"),
-            ("Naukri", "https://www.naukri.com/nlogin/login", "naukri_cookies.json", "https://www.naukri.com/mnjuser/homepage"),
-            ("Wellfound", "https://wellfound.com/login", "wellfound_cookies.json", "https://wellfound.com/jobs")
+            ("Internshala", "https://internshala.com/login/student", "cookies_internshala.json", "https://internshala.com/student/dashboard"),
+            ("LinkedIn", "https://www.linkedin.com/login", "cookies_linkedin.json", "https://www.linkedin.com/feed/"),
+            ("Naukri", "https://www.naukri.com/nlogin/login", "cookies_naukri.json", "https://www.naukri.com/mnjuser/homepage"),
+            ("Wellfound", "https://wellfound.com/login", "cookies_wellfound.json", "https://wellfound.com/jobs")
         ]
 
         for name, login_url, cookie_file, success_url in platforms:
