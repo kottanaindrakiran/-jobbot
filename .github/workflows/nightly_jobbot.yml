@@ -46,22 +46,28 @@ jobs:
 
       # ── Inject Tokens & Cookies ──────────────────────────────────────────────
       - name: Inject Tokens and Cookies
+        env:
+          GMAIL_TOKEN_JSON:    ${{ secrets.GMAIL_TOKEN_JSON }}
+          LINKEDIN_COOKIES:    ${{ secrets.LINKEDIN_COOKIES }}
+          NAUKRI_COOKIES:      ${{ secrets.NAUKRI_COOKIES }}
+          WELLFOUND_COOKIES:    ${{ secrets.WELLFOUND_COOKIES }}
+          INTERNSHALA_COOKIES: ${{ secrets.INTERNSHALA_COOKIES }}
         run: |
           mkdir -p jobbot/logs
-          if [ -n "${{ secrets.GMAIL_TOKEN_JSON }}" ]; then
-            echo '${{ secrets.GMAIL_TOKEN_JSON }}' > jobbot/logs/token_gmail.json
+          if [ -n "$GMAIL_TOKEN_JSON" ]; then
+            echo "$GMAIL_TOKEN_JSON" > jobbot/logs/token_gmail.json
           fi
-          if [ -n "${{ secrets.LINKEDIN_COOKIES }}" ]; then
-            echo '${{ secrets.LINKEDIN_COOKIES }}' > jobbot/logs/cookies_linkedin.json
+          if [ -n "$LINKEDIN_COOKIES" ]; then
+            echo "$LINKEDIN_COOKIES" > jobbot/logs/cookies_linkedin.json
           fi
-          if [ -n "${{ secrets.NAUKRI_COOKIES }}" ]; then
-            echo '${{ secrets.NAUKRI_COOKIES }}' > jobbot/logs/cookies_naukri.json
+          if [ -n "$NAUKRI_COOKIES" ]; then
+            echo "$NAUKRI_COOKIES" > jobbot/logs/cookies_naukri.json
           fi
-          if [ -n "${{ secrets.WELLFOUND_COOKIES }}" ]; then
-            echo '${{ secrets.WELLFOUND_COOKIES }}' > jobbot/logs/cookies_wellfound.json
+          if [ -n "$WELLFOUND_COOKIES" ]; then
+            echo "$WELLFOUND_COOKIES" > jobbot/logs/cookies_wellfound.json
           fi
-          if [ -n "${{ secrets.INTERNSHALA_COOKIES }}" ]; then
-            echo '${{ secrets.INTERNSHALA_COOKIES }}' > jobbot/logs/cookies_internshala.json
+          if [ -n "$INTERNSHALA_COOKIES" ]; then
+            echo "$INTERNSHALA_COOKIES" > jobbot/logs/cookies_internshala.json
           fi
 
       # ── Run JobBot ───────────────────────────────────────────────────────────

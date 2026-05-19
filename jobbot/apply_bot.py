@@ -69,11 +69,23 @@ async def _save_cookies(context, name: str):
 async def _load_cookies(context, name: str) -> bool:
     path = COOKIES_DIR / f"cookies_{name}.json"
     if not path.exists():
+        log.info(f"[ApplyBot] Cookie file not found for {name}: {path}")
         return False
-    cookies = json.loads(path.read_text(encoding="utf-8"))
-    await context.add_cookies(cookies)
-    log.info(f"[ApplyBot] Cookies loaded ← {path}")
-    return True
+    try:
+        content = path.read_text(encoding="utf-8").strip()
+        if not content:
+            log.warning(f"[ApplyBot] Cookie file for {name} is empty!")
+            return False
+        cookies = json.loads(content)
+        await context.add_cookies(cookies)
+        log.info(f"[ApplyBot] Cookies loaded successfully for {name} ({len(cookies)} cookies) ← {path}")
+        return True
+    except json.JSONDecodeError as je:
+        log.error(f"[ApplyBot] Cookie file for {name} has invalid JSON: {je}")
+        return False
+    except Exception as e:
+        log.error(f"[ApplyBot] Failed to load cookies for {name}: {e}")
+        return False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -181,7 +193,10 @@ async def _apply_linkedin_async(job: dict, resume_pdf_path: str, profile: dict |
 
     try:
         async with async_playwright() as pw:
-            browser: Browser = await pw.chromium.launch(headless=HEADLESS)
+            browser: Browser = await pw.chromium.launch(
+                headless=HEADLESS,
+                args=["--disable-blink-features=AutomationControlled"]
+            )
             context = await browser.new_context(
                 user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -349,7 +364,10 @@ async def _apply_naukri_async(job: dict, resume_pdf_path: str, profile: dict | N
 
     try:
         async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=HEADLESS)
+            browser = await pw.chromium.launch(
+                headless=HEADLESS,
+                args=["--disable-blink-features=AutomationControlled"]
+            )
             context = await browser.new_context(
                 user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -520,7 +538,10 @@ async def _apply_internshala_async(job: dict, resume_pdf_path: str, profile: dic
 
     try:
         async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=HEADLESS)
+            browser = await pw.chromium.launch(
+                headless=HEADLESS,
+                args=["--disable-blink-features=AutomationControlled"]
+            )
             context = await browser.new_context(
                 user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -661,7 +682,10 @@ async def _apply_wellfound_async(job: dict, resume_pdf_path: str, profile: dict 
 
     try:
         async with async_playwright() as pw:
-            browser = await pw.chromium.launch(headless=HEADLESS)
+            browser = await pw.chromium.launch(
+                headless=HEADLESS,
+                args=["--disable-blink-features=AutomationControlled"]
+            )
             context = await browser.new_context(
                 user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

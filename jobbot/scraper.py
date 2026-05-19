@@ -107,13 +107,30 @@ def _save_cookies(context, name: str):
 
 def _load_cookies(context, name: str) -> bool:
     path = COOKIES_DIR / f"cookies_{name}.json"
-    if path.exists():
-        context.add_cookies(json.loads(path.read_text(encoding="utf-8")))
+    if not path.exists():
+        log.info(f"[{name}] Cookie file not found at {path}")
+        return False
+    try:
+        content = path.read_text(encoding="utf-8").strip()
+        if not content:
+            log.warning(f"[{name}] Cookie file is empty!")
+            return False
+        cookies = json.loads(content)
+        context.add_cookies(cookies)
+        log.info(f"[{name}] Cookies loaded successfully ({len(cookies)} cookies) ✓")
         return True
-    return False
+    except json.JSONDecodeError as je:
+        log.error(f"[{name}] Cookie file has invalid JSON: {je}")
+        return False
+    except Exception as e:
+        log.error(f"[{name}] Failed to load cookies: {e}")
+        return False
 
 def _new_browser_context(pw):
-    browser = pw.chromium.launch(headless=HEADLESS)
+    browser = pw.chromium.launch(
+        headless=HEADLESS,
+        args=["--disable-blink-features=AutomationControlled"]
+    )
     context = browser.new_context(
         user_agent=(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
