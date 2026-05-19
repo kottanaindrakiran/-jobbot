@@ -218,25 +218,37 @@ def main():
 
                 # ── 4c: Auto-apply (LinkedIn → Naukri fallback) ───────────────
                 if apply_count < CONFIG["max_applies"]:
-                    if source == "linkedin":
-                        log.info("  Trying LinkedIn Easy Apply …")
-                        applied = apply_bot.apply_linkedin(job, resume_path, profile)
+                        if source == "linkedin":
+                            log.info("  Trying LinkedIn Easy Apply …")
+                            applied = apply_bot.apply_linkedin(job, resume_path, profile)
 
-                    if not applied and source == "naukri":
-                        log.info("  Trying Naukri Apply …")
-                        applied = apply_bot.apply_naukri(job, resume_path, profile)
+                        elif source == "naukri":
+                            log.info("  Trying Naukri Apply …")
+                            applied = apply_bot.apply_naukri(job, resume_path, profile)
 
-                    if applied:
-                        apply_count += 1
-                        stats["applied"] += 1
-                        job["applied"] = True
-                        log.info(f"  ✅ Applied via bot ({apply_count}/{CONFIG['max_applies']})")
-                        try:
-                            sheets_logger.log_application(job, "EasyApply", score)
-                        except Exception as se:
-                            log.warning(f"  Sheets log failed: {se}")
+                        elif source == "internshala":
+                            log.info("  Trying Internshala Apply …")
+                            applied = apply_bot.apply_internshala(job, resume_path, profile)
+
+                        elif source == "wellfound":
+                            log.info("  Trying Wellfound Apply …")
+                            applied = apply_bot.apply_wellfound(job, resume_path, profile)
+
+                        else:
+                            log.info(f"  Source '{source}' not supported for auto-apply")
+
+                        if applied:
+                            apply_count += 1
+                            stats["applied"] += 1
+                            job["applied"] = True
+                            log.info(f"  ✅ Applied via bot ({apply_count}/{CONFIG['max_applies']})")
+                            try:
+                                sheets_logger.log_application(job, "EasyApply", score)
+                            except Exception as se:
+                                log.warning(f"  Sheets log failed: {se}")
                 else:
                     log.info(f"  Apply cap reached ({CONFIG['max_applies']}) — skipping bot apply")
+
 
                 # ── 4d: Cold email if apply failed / unsupported source ───────
                 if not applied:
