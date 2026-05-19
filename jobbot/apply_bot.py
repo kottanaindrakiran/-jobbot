@@ -42,7 +42,7 @@ IS_PASS    = os.getenv("INTERNSHALA_PASSWORD")
 WF_EMAIL   = os.getenv("WELLFOUND_EMAIL")
 WF_PASS    = os.getenv("WELLFOUND_PASSWORD")
 
-HEADLESS   = True
+HEADLESS   = os.getenv("GITHUB_ACTIONS") == "true"
 NAV_TIMEOUT = 30_000   # ms
 ACT_TIMEOUT = 10_000   # ms
 

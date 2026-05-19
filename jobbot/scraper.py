@@ -56,7 +56,7 @@ UA = UserAgent()
 REQUEST_TIMEOUT = 20  # seconds for requests lib
 
 # Playwright settings
-HEADLESS    = True
+HEADLESS    = os.getenv("GITHUB_ACTIONS") == "true"
 NAV_TIMEOUT = 30_000  # ms
 
 # Credentials
@@ -214,6 +214,8 @@ def scrape_linkedin(roles: list[str] = TARGET_ROLES) -> list[dict]:
 
                     soup  = BeautifulSoup(page.content(), "lxml")
                     cards = (
+                        soup.select("div.job-card-container") or
+                        soup.select("div.job-card-list__entity-lockup") or
                         soup.select("div.base-card") or
                         soup.select(".job-search-card") or
                         soup.select("li.jobs-search__results-list > div")
@@ -221,19 +223,41 @@ def scrape_linkedin(roles: list[str] = TARGET_ROLES) -> list[dict]:
 
                     role_jobs = []
                     for card in cards:
-                        title_el   = card.select_one("h3.base-search-card__title, h3.job-search-card__title")
-                        company_el = card.select_one("h4.base-search-card__subtitle, a.job-search-card__company-name")
-                        loc_el     = card.select_one("span.job-search-card__location")
-                        link_el    = card.select_one("a.base-card__full-link, a.job-search-card__title-link")
+                        title_el = (
+                            card.select_one("a.job-card-list__title--link") or
+                            card.select_one("h3.base-search-card__title, h3.job-search-card__title")
+                        )
+                        company_el = (
+                            card.select_one("span.job-card-container__primary-description") or
+                            card.select_one(".job-card-container__company-link") or
+                            card.select_one("div.artdeco-entity-lockup__subtitle") or
+                            card.select_one("h4.base-search-card__subtitle, a.job-search-card__company-name")
+                        )
+                        loc_el = (
+                            card.select_one("li.job-card-container__metadata-item") or
+                            card.select_one("span.job-card-container__metadata-item") or
+                            card.select_one(".job-card-container__metadata-wrapper") or
+                            card.select_one("span.job-search-card__location")
+                        )
+                        link_el = (
+                            title_el if title_el and (title_el.get("href") or "job-card" in title_el.get("class", [])) else None
+                        ) or (
+                            card.select_one("a.base-card__full-link, a.job-search-card__title-link")
+                        )
                         date_el    = card.select_one("time")
                         if not title_el:
                             continue
+                        
+                        href = link_el["href"] if link_el and link_el.get("href") else url
+                        if href.startswith("/"):
+                            href = "https://www.linkedin.com" + href
+
                         role_jobs.append(_make_job(
-                            title     = title_el.get_text(),
-                            company   = company_el.get_text() if company_el else "",
-                            location  = loc_el.get_text()     if loc_el     else LOCATION,
+                            title     = title_el.get_text(strip=True),
+                            company   = company_el.get_text(strip=True) if company_el else "",
+                            location  = loc_el.get_text(strip=True)     if loc_el     else LOCATION,
                             jd_text   = "",
-                            apply_url = link_el["href"]        if link_el    else url,
+                            apply_url = href,
                             source    = "linkedin",
                             posted_at = date_el.get("datetime", "") if date_el else "",
                         ))
@@ -287,11 +311,17 @@ def scrape_naukri(roles: list[str] = TARGET_ROLES) -> list[dict]:
             # ── Login ──────────────────────────────────────────────────────
             logged_in = False
             if _load_cookies(context, "naukri"):
-                page.goto("https://www.naukri.com/mnjuser/homepage", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
-                page.wait_for_load_state("domcontentloaded")
-                if "nlogin" not in page.url and "login" not in page.url:
-                    log.info("[Naukri] Session restored via cookies ✓")
-                    logged_in = True
+                try:
+                    page.goto("https://www.naukri.com/mnjuser/homepage", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+                    page.wait_for_load_state("domcontentloaded")
+                    title = page.title()
+                    if "nlogin" not in page.url and "login" not in page.url and "access denied" not in title.lower() and "cloudflare" not in title.lower():
+                        log.info("[Naukri] Session restored via cookies ✓")
+                        logged_in = True
+                    else:
+                        log.warning(f"[Naukri] Session cookie invalid or blocked by Cloudflare (URL: {page.url}, Title: {title})")
+                except Exception as e:
+                    log.warning(f"[Naukri] Session restore check failed: {e}")
 
             if not logged_in:
                 log.info("[Naukri] Logging in …")
@@ -403,11 +433,17 @@ def scrape_wellfound(roles: list[str] = TARGET_ROLES) -> list[dict]:
             # ── Login ──────────────────────────────────────────────────────
             logged_in = False
             if _load_cookies(context, "wellfound"):
-                page.goto("https://wellfound.com/jobs", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
-                page.wait_for_load_state("domcontentloaded")
-                if "login" not in page.url:
-                    log.info("[Wellfound] Session restored via cookies ✓")
-                    logged_in = True
+                try:
+                    page.goto("https://wellfound.com/jobs", wait_until="domcontentloaded", timeout=NAV_TIMEOUT)
+                    page.wait_for_load_state("domcontentloaded")
+                    title = page.title()
+                    if "login" not in page.url and "access denied" not in title.lower() and "cloudflare" not in title.lower():
+                        log.info("[Wellfound] Session restored via cookies ✓")
+                        logged_in = True
+                    else:
+                        log.warning(f"[Wellfound] Session cookie invalid or blocked by Cloudflare (URL: {page.url}, Title: {title})")
+                except Exception as e:
+                    log.warning(f"[Wellfound] Session restore check failed: {e}")
 
             if not logged_in:
                 log.info("[Wellfound] Logging in …")
