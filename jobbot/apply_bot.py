@@ -165,7 +165,7 @@ async def _li_fill_form_step(page: Page, profile: dict):
             )
 
 
-async def apply_linkedin(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
+async def _apply_linkedin_async(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
     """
     Apply to a LinkedIn job via Easy Apply.
 
@@ -333,7 +333,7 @@ async def _naukri_login(page: Page, context) -> bool:
     return False
 
 
-async def apply_naukri(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
+async def _apply_naukri_async(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
     """
     Apply to a Naukri job listing.
 
@@ -504,7 +504,7 @@ async def _internshala_login(page: Page, context) -> bool:
     return False
 
 
-async def apply_internshala(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
+async def _apply_internshala_async(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
     """
     Apply to an Internshala job listing via Playwright.
     Returns True if application submitted successfully.
@@ -645,7 +645,7 @@ async def _wellfound_login(page: Page, context) -> bool:
     return False
 
 
-async def apply_wellfound(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
+async def _apply_wellfound_async(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
     """
     Apply to a Wellfound job listing.
     Returns True if application submitted successfully.
@@ -733,6 +733,43 @@ async def apply_wellfound(job: dict, resume_pdf_path: str, profile: dict | None 
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  SYNC WRAPPERS  — main.py calls these directly (no await needed)
+# ─────────────────────────────────────────────────────────────────────────────
+def _run_async(coro):
+    """Run an async coroutine synchronously."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result()
+        return loop.run_until_complete(coro)
+    except RuntimeError:
+        return asyncio.run(coro)
+
+
+def apply_linkedin(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
+    """Sync wrapper — apply to LinkedIn job."""
+    return _run_async(_apply_linkedin_async(job, resume_pdf_path, profile))
+
+
+def apply_naukri(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
+    """Sync wrapper — apply to Naukri job."""
+    return _run_async(_apply_naukri_async(job, resume_pdf_path, profile))
+
+
+def apply_internshala(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
+    """Sync wrapper — apply to Internshala job."""
+    return _run_async(_apply_internshala_async(job, resume_pdf_path, profile))
+
+
+def apply_wellfound(job: dict, resume_pdf_path: str, profile: dict | None = None) -> bool:
+    """Sync wrapper — apply to Wellfound job."""
+    return _run_async(_apply_wellfound_async(job, resume_pdf_path, profile))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  ORCHESTRATOR
 # ─────────────────────────────────────────────────────────────────────────────
 async def _run_apply_bot_async(jobs: list[dict], profile: dict) -> list[dict]:
@@ -744,13 +781,13 @@ async def _run_apply_bot_async(jobs: list[dict], profile: dict) -> list[dict]:
         log.info(f"\n[ApplyBot] [{i}/{len(jobs)}] {job.get('title')} @ {job.get('company')}  [{source}]")
 
         if source == "linkedin":
-            job["applied"] = await apply_linkedin(job, resume, profile)
+            job["applied"] = await _apply_linkedin_async(job, resume, profile)
         elif source == "naukri":
-            job["applied"] = await apply_naukri(job, resume, profile)
+            job["applied"] = await _apply_naukri_async(job, resume, profile)
         elif source == "internshala":
-            job["applied"] = await apply_internshala(job, resume, profile)
+            job["applied"] = await _apply_internshala_async(job, resume, profile)
         elif source == "wellfound":
-            job["applied"] = await apply_wellfound(job, resume, profile)
+            job["applied"] = await _apply_wellfound_async(job, resume, profile)
         else:
             log.info(f"[ApplyBot] Source '{source}' not supported — skipping")
             job["applied"] = False
