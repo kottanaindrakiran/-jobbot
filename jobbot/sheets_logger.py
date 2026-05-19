@@ -286,21 +286,26 @@ def get_applied_urls() -> list[str]:
     Return all non-empty values from the 'Apply URL' column.
     Used by filter.py to skip already-applied jobs.
     """
+    # Only count as "applied" if the bot actually succeeded.
+    # DryRun  = just a test run      → retry for real
+    # Manual  = bot couldn't apply   → retry tonight
+    # EasyApply / Email = real apply → skip to avoid duplicates
+    ACTUALLY_APPLIED = {"EasyApply", "Email"}
     try:
         ws   = _get_worksheet()
         rows = ws.get_all_values()
         if len(rows) < 2:
             return []
-            
+
         urls = []
         for row in rows[1:]:
             if len(row) >= max(COL_URL, COL_METHOD):
-                url = row[COL_URL - 1].strip()
+                url    = row[COL_URL    - 1].strip()
                 method = row[COL_METHOD - 1].strip()
-                if url and method != "DryRun":
+                if url and method in ACTUALLY_APPLIED:
                     urls.append(url)
-                    
-        log.info(f"[Sheets] Loaded {len(urls)} applied URLs from Sheets (ignoring DryRuns)")
+
+        log.info(f"[Sheets] Loaded {len(urls)} actually-applied URLs from Sheets")
         return urls
     except Exception as e:
         log.warning(f"[Sheets] Could not load applied URLs: {e}")

@@ -153,17 +153,23 @@ def scrape_linkedin(roles: list[str] = TARGET_ROLES) -> list[dict]:
             if not logged_in:
                 log.info("[LinkedIn] Logging in …")
                 page.goto("https://www.linkedin.com/login", timeout=NAV_TIMEOUT)
-                page.fill("#username", LI_EMAIL)
-                page.fill("#password", LI_PASS)
-                page.click("button[type=submit]")
-                page.wait_for_load_state("networkidle")
-                time.sleep(2)
-                if "feed" in page.url or "mynetwork" in page.url:
-                    log.info("[LinkedIn] Login successful ✓")
-                    _save_cookies(context, "linkedin")
-                    logged_in = True
-                else:
-                    log.warning(f"[LinkedIn] Login failed (URL: {page.url})")
+                try:
+                    page.wait_for_selector("#username", timeout=NAV_TIMEOUT)
+                    page.fill("#username", LI_EMAIL)
+                    page.fill("#password", LI_PASS)
+                    page.click("button[type=submit]")
+                    page.wait_for_load_state("networkidle")
+                    time.sleep(2)
+                    if "feed" in page.url or "mynetwork" in page.url:
+                        log.info("[LinkedIn] Login successful ✓")
+                        _save_cookies(context, "linkedin")
+                        logged_in = True
+                    else:
+                        log.warning(f"[LinkedIn] Login failed (URL: {page.url}) — skipping LinkedIn")
+                        browser.close()
+                        return []
+                except PWTimeout:
+                    log.warning("[LinkedIn] Login page timed out — site may be blocking headless browser")
                     browser.close()
                     return []
 
@@ -270,8 +276,9 @@ def scrape_naukri(roles: list[str] = TARGET_ROLES) -> list[dict]:
             if not logged_in:
                 log.info("[Naukri] Logging in …")
                 page.goto("https://www.naukri.com/nlogin/login", timeout=NAV_TIMEOUT)
-                time.sleep(2)
                 try:
+                    page.wait_for_selector("input[placeholder*='Email']", timeout=NAV_TIMEOUT)
+                    time.sleep(1)
                     page.fill("input[placeholder*='Email']", NK_EMAIL)
                     page.fill("input[placeholder*='Password']", NK_PASS)
                     page.click("button[type=submit]")
@@ -280,6 +287,10 @@ def scrape_naukri(roles: list[str] = TARGET_ROLES) -> list[dict]:
                     _save_cookies(context, "naukri")
                     log.info("[Naukri] Login successful ✓")
                     logged_in = True
+                except PWTimeout:
+                    log.warning("[Naukri] Login page timed out — site may be blocking headless browser")
+                    browser.close()
+                    return []
                 except Exception as e:
                     log.warning(f"[Naukri] Login error: {e}")
                     browser.close()
@@ -381,11 +392,12 @@ def scrape_wellfound(roles: list[str] = TARGET_ROLES) -> list[dict]:
             if not logged_in:
                 log.info("[Wellfound] Logging in …")
                 page.goto("https://wellfound.com/login", timeout=NAV_TIMEOUT)
-                time.sleep(2)
                 try:
-                    page.fill("input[name='user[email]'], input[type='email']", WF_EMAIL)
-                    page.fill("input[name='user[password]'], input[type='password']", WF_PASS)
-                    page.click("input[type='submit'], button[type='submit']")
+                    page.wait_for_selector("input[type='email']", timeout=NAV_TIMEOUT)
+                    time.sleep(1)
+                    page.fill("input[type='email']", WF_EMAIL)
+                    page.fill("input[type='password']", WF_PASS)
+                    page.click("button[type='submit']")
                     page.wait_for_load_state("networkidle")
                     time.sleep(2)
                     if "login" not in page.url:
@@ -396,6 +408,10 @@ def scrape_wellfound(roles: list[str] = TARGET_ROLES) -> list[dict]:
                         log.warning(f"[Wellfound] Login failed (URL: {page.url})")
                         browser.close()
                         return []
+                except PWTimeout:
+                    log.warning("[Wellfound] Login page timed out — Cloudflare may be blocking")
+                    browser.close()
+                    return []
                 except Exception as e:
                     log.warning(f"[Wellfound] Login error: {e}")
                     browser.close()
