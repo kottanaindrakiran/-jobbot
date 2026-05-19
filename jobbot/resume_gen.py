@@ -504,20 +504,11 @@ def generate_resume(job: dict, profile: dict | None = None) -> str:
 
     output_path = _make_filename(job)
 
-    # ── Try Claude first ───────────────────────────────────────────────────────
+    # ── Try AI Cascade ───────────────────────────────────────────────────────
     try:
         resume_text = _call_claude(profile, job)
-    except anthropic.APIConnectionError as e:
-        log.warning(f"[ResumeGen] Claude connection error: {e} — using base template")
-        resume_text = _build_base_template(profile)
-    except anthropic.RateLimitError:
-        log.warning("[ResumeGen] Claude rate limit hit — using base template")
-        resume_text = _build_base_template(profile)
-    except anthropic.APIStatusError as e:
-        log.warning(f"[ResumeGen] Claude API error {e.status_code}: {e.message} — using base template")
-        resume_text = _build_base_template(profile)
     except Exception as e:
-        log.warning(f"[ResumeGen] Unexpected error: {e} — using base template")
+        log.warning(f"[ResumeGen] AI error or all providers failed: {e} — using base template")
         resume_text = _build_base_template(profile)
 
     # ── Render to PDF ──────────────────────────────────────────────────────────
